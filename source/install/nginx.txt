@@ -1,44 +1,44 @@
 server {
-listen 80;
-server_name localhost;
+    listen 80;
+    server_name novius-os.app;
+    root "/home/vagrant/Code/novius-os/public";
 
-root /var/www/novius-os;
-index index.php index.html;
+    index index.html index.htm index.php;
 
-access_log /var/log/nginx/access.log;
-error_log /var/log/nginx/error.log notice;
+    error_page 404 = /htdocs/novius-os/404.php;
 
-location = /favicon.ico {
-log_not_found off;
-access_log off;
-}
+    charset utf-8;
 
-location = /robots.txt {
-allow all;
-log_not_found off;
-access_log off;
-}
+    location @rewrites {
+        rewrite ^/(admin(/.*)?)$ /htdocs/novius-os/admin.php last;
+        rewrite ^/.+(.html|/)$ /htdocs/novius-os/front.php last;
+        rewrite ^/([^.]*)$ /htdocs/novius-os/front.php last;
+        rewrite ^ /htdocs/novius-os/front.php last;
+    }
 
-error_page 404 /public/htdocs/novius-os/404.php;
+    rewrite ^/install.php /htdocs/install.php last;
 
-autoindex off;
+    try_files $uri /htdocs/$uri @rewrites;
 
-location @rewrites {
-rewrite ^/(admin(/.*)?)$ /public/htdocs/novius-os/admin.php last;
-rewrite ^/.+(.html|/)$ /public/htdocs/novius-os/front.php last;
-rewrite ^/([^.]*)$ /public/htdocs/novius-os/front.php last;
-rewrite ^ /public/htdocs/novius-os/front.php last;
-}
+    location = /favicon.ico { access_log off; log_not_found off; }
+    location = /robots.txt  { access_log off; log_not_found off; }
 
-rewrite ^/(static|cache|media|data|htdocs)/(.*) /public/$1/$2 break;
-rewrite ^/install.php /public/htdocs/install.php last;
+    access_log /var/log/nginx/novius-os.app-access.log;
+    error_log  /var/log/nginx/novius-os.app-error.log error;
 
-try_files $uri @rewrites;
+    sendfile off;
 
-location ~ \.php$ {
- fastcgi_split_path_info ^(.+\.php)(/.+)$;
- fastcgi_pass unix:/var/run/php5-fpm.sock;
- fastcgi_index index.php;
- include fastcgi_params;
- }
+    location ~ \.php$ {
+        fastcgi_intercept_errors on;
+        fastcgi_split_path_info ^(.+\.php)(/.+)$;
+        fastcgi_pass unix:/var/run/php5-fpm.sock;
+        # fastcgi_pass 127.0.0.1:9000;
+        fastcgi_index index.php;
+        fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;
+        include fastcgi_params;
+    }
+
+    location ~ /\.ht {
+        deny all;
+    }
 }
